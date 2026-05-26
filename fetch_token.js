@@ -2,81 +2,132 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 
 (async () => {
-  const browser = await chromium.launch({ 
+
+  const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled'
+    ]
   });
-  
+
   const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+    viewport: {
+      width: 1366,
+      height: 768
+    },
+
+    userAgent:
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+
     locale: 'en-US',
-    timezoneId: 'Asia/Kolkata',
+    timezoneId: 'Asia/Kolkata'
   });
-  
+
   const page = await context.newPage();
-  
-  let guestToken = null;
 
-  // Response intercept karo
-  page.on('response', async response => {
-    try {
-      const headers = response.headers();
-      const token = headers['x-hs-updatedusertoken'] || headers['x-hs-usertoken'];
-      if (token && !guestToken) {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1] + '==', 'base64').toString());
-        const sub = JSON.parse(payload.sub);
-        if (sub.type === 'guest') {
-          guestToken = token;
-          console.log('Guest token found in response header!');
-        }
+  let token = null;
+
+  page.on('request', req => {
+
+    const url = req.url();
+
+    if (
+      url.includes('/api/internal/bff/v2/start')
+    ) {
+
+      const headers = req.headers();
+
+      const t =
+        headers['x-hs-usertoken'] ||
+        headers['x-hs-updatedusertoken'];
+
+      if (t) {
+        token = t;
+
+        console.log('\nTOKEN FOUND\n');
       }
-    } catch(e) {}
+    }
   });
 
-  console.log('Opening hotstar...');
-  await page.goto('https://www.hotstar.com/in', { 
-    waitUntil: 'networkidle',
-    timeout: 60000
-  });
+  console.log('Opening page...');
 
-  // Wait extra 3s
-  await page.waitForTimeout(3000);
+  await page.goto(
+    'https://www.hotstar.com/in/mypage#mp-login',
+    {
+      waitUntil: 'domcontentloaded',
+      timeout: 120000
+    }
+  );
 
-  // Cookie se try karo
-  if (!guestToken) {
-    console.log('Trying cookies...');
-    const cookies = await context.cookies('https://www.hotstar.com');
-    const userUP = cookies.find(c => c.name === 'userUP');
+  await page.waitForTimeout(15000);
+
+  // click login buttons
+  try {
+
+    const buttons =
+      await page.locator('button').all();
+
+    for (const btn of buttons) {
+
+      const txt = await btn.textContent();
+
+      if (
+        txt &&
+        txt.toLowerCase().includes('log')
+      ) {
+
+        console.log('Clicking login...');
+        await btn.click();
+
+        break;
+      }
+    }
+
+  } catch (e) {}
+
+  await page.waitForTimeout(15000);
+
+  // fallback cookie
+  if (!token) {
+
+    const cookies =
+      await context.cookies();
+
+    const userUP =
+      cookies.find(
+        c => c.name === 'userUP'
+      );
+
     if (userUP) {
-      try {
-        const payload = JSON.parse(Buffer.from(userUP.value.split('.')[1] + '==', 'base64').toString());
-        const sub = JSON.parse(payload.sub);
-        if (sub.type === 'guest') {
-          guestToken = userUP.value;
-          console.log('Guest token found in cookie!');
-        }
-      } catch(e) {}
-    }
-    
-    // sessionUserUP bhi check karo
-    const sessionUP = cookies.find(c => c.name === 'sessionUserUP');
-    if (!guestToken && sessionUP) {
-      guestToken = sessionUP.value;
-      console.log('Token found in sessionUserUP!');
+
+      token = userUP.value;
+
+      console.log(
+        'Token from cookie fallback'
+      );
     }
 
-    // Debug: sab cookies print karo
-    console.log('All cookies:', cookies.map(c => c.name).join(', '));
+    console.log(
+      'Cookies:',
+      cookies.map(c => c.name).join(', ')
+    );
   }
 
   await browser.close();
 
-  if (guestToken) {
-    fs.writeFileSync('guest_token.txt', guestToken);
-    console.log('Token saved!');
-    console.log('Token preview:', guestToken.substring(0, 50) + '...');
-  } else {
-    console.log('Token not found!');
+  if (!token) {
+
+    console.log('TOKEN NOT FOUND');
+
     process.exit(1);
   }
+
+  fs.writeFileSync(
+    'guest_token.txt',
+    token
+  );
+
+  console.log('\nSAVED\n');
 })();
