@@ -22,36 +22,19 @@ const fs = require('fs');
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
 
     locale: 'en-US',
-    timezoneId: 'Asia/Kolkata'
+    timezoneId: 'Asia/Kolkata',
+
+    extraHTTPHeaders: {
+      'x-country-code': 'in',
+      'x-hs-platform': 'web',
+      'x-hs-app': '260306000',
+      'x-hs-accept-language': 'eng'
+    }
   });
 
   const page = await context.newPage();
 
-  let token = null;
-
-  page.on('request', req => {
-
-    const url = req.url();
-
-    if (
-      url.includes('/api/internal/bff/v2/start')
-    ) {
-
-      const headers = req.headers();
-
-      const t =
-        headers['x-hs-usertoken'] ||
-        headers['x-hs-updatedusertoken'];
-
-      if (t) {
-        token = t;
-
-        console.log('\nTOKEN FOUND\n');
-      }
-    }
-  });
-
-  console.log('Opening page...');
+  console.log('Opening Hotstar...');
 
   await page.goto(
     'https://www.hotstar.com/in/mypage#mp-login',
@@ -61,39 +44,60 @@ const fs = require('fs');
     }
   );
 
-  await page.waitForTimeout(15000);
+  await page.waitForTimeout(10000);
 
-  // click login buttons
-  try {
+  console.log('Calling login API...');
 
-    const buttons =
-      await page.locator('button').all();
+  const result = await page.evaluate(async () => {
 
-    for (const btn of buttons) {
+    const res = await fetch(
+      'https://www.hotstar.com/api/internal/bff/v2/start?journey=login',
+      {
+        method: 'POST',
 
-      const txt = await btn.textContent();
+        credentials: 'include',
 
-      if (
-        txt &&
-        txt.toLowerCase().includes('log')
-      ) {
+        headers: {
+          'accept': 'application/json, text/plain, */*',
+          'content-type': 'application/json',
+          'x-country-code': 'in',
+          'x-hs-platform': 'web',
+          'x-hs-app': '260306000',
+          'x-hs-accept-language': 'eng'
+        },
 
-        console.log('Clicking login...');
-        await btn.click();
-
-        break;
+        body: JSON.stringify({
+          deeplink_url: '',
+          app_launch_count: 5
+        })
       }
-    }
+    );
 
-  } catch (e) {}
+    return {
+      status: res.status,
+      headers: Object.fromEntries(
+        res.headers.entries()
+      )
+    };
 
-  await page.waitForTimeout(15000);
+  });
 
-  // fallback cookie
+  console.log('STATUS:', result.status);
+
+  const token =
+    result.headers['x-hs-usertoken'] ||
+    result.headers['x-hs-updatedusertoken'];
+
   if (!token) {
 
-    const cookies =
-      await context.cookies();
+    console.log('No token in response');
+
+    const cookies = await context.cookies();
+
+    console.log(
+      'Cookies:',
+      cookies.map(c => c.name).join(', ')
+    );
 
     const userUP =
       cookies.find(
@@ -102,24 +106,15 @@ const fs = require('fs');
 
     if (userUP) {
 
-      token = userUP.value;
-
-      console.log(
-        'Token from cookie fallback'
+      fs.writeFileSync(
+        'guest_token.txt',
+        userUP.value
       );
+
+      console.log('\nTOKEN FROM COOKIE\n');
+
+      return;
     }
-
-    console.log(
-      'Cookies:',
-      cookies.map(c => c.name).join(', ')
-    );
-  }
-
-  await browser.close();
-
-  if (!token) {
-
-    console.log('TOKEN NOT FOUND');
 
     process.exit(1);
   }
@@ -129,5 +124,8 @@ const fs = require('fs');
     token
   );
 
-  console.log('\nSAVED\n');
+  console.log('\nTOKEN SAVED\n');
+
+  await browser.close();
+
 })();
