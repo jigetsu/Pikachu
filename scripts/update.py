@@ -1,8 +1,8 @@
 import re
+import os
 import requests
 
-SOURCE_URL = "YOUR_SECRET_SOURCE_URL"
-
+SOURCE_URL = os.environ.get("SOURCE_URL")
 LOCAL_PLAYLIST = "playlist.m3u"
 
 headers = {
