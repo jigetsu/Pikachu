@@ -196,13 +196,6 @@ https://jiotvpllive.cdn.jio.com/bpk-tv/MI_TV_BTS/WDVLive/index.mpd
 #EXTHTTP:{"cookie":"__hdnea__=st=1779931833~exp=1779953433~acl=/bpk-tv/Pickleball_Now_BTS/WDVLive/*~hmac=2315cae2363d51ccf08ac742d8b8525e803382e49b661476d49a1af8cea31148"}
 https://jiotvpllive.cdn.jio.com/bpk-tv/Pickleball_Now_BTS/WDVLive/index.mpd
 
-#EXTINF:-1 tvg-id="2779" tvg-logo="https://jiotv.catchup.cdn.jio.com/dare_images/images/Red_Bull_TV.png" group-title="Sports",Red Bull TV
-#KODIPROP:inputstream.adaptive.license_type=clearkey
-#KODIPROP:inputstream.adaptive.license_key=https://jiostarvortextv.vvishwas042.workers.dev/key.json?id=2779
-#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36
-#EXTHTTP:{"cookie":"__hdnea__=st=1779931833~exp=1779953433~acl=/bpk-tv/Red_Bull_TV_BTS/WDVLive/*~hmac=4efb2c596de75969ec4f5f53c16f6720d334cb2627275632ea92513b59a1d0fb"}
-https://jiotvpllive.cdn.jio.com/bpk-tv/Red_Bull_TV_BTS/WDVLive/index.mpd
-
 #EXTINF:-1 tvg-id="1132" tvg-logo="https://jiotv.catchup.cdn.jio.com/dare_images/images/Star_Plus_HD.png" group-title="Entertainment",Star Plus HD
 #KODIPROP:inputstream.adaptive.license_type=clearkey
 #KODIPROP:inputstream.adaptive.license_key=https://jiostarvortextv.vvishwas042.workers.dev/key.json?id=1132
